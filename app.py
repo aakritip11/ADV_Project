@@ -104,7 +104,7 @@ def main():
             st.subheader("Key Columns and Their Data Types:")
             if not key_columns:
                 st.write("No key columns found for analysis.")
-            else:
+            else: 
                 for column, col_type in key_columns:
                     st.write(f"- {column}: {col_type}")
 

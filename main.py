@@ -282,6 +282,12 @@ def query_visualizations():
             
     analysis = analyze_dataset()
     result = process_natural_language_query(data['query'], analysis)
+    
+    # Include chart data in the result
+    if 'primary_visualization' in result:
+        chart_data = dataset[result['primary_visualization']['variables']].to_dict(orient='records')
+        result['chart_data'] = chart_data
+    
     return jsonify(result)
 
 def serialize_numpy(obj):

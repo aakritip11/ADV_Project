@@ -4,7 +4,7 @@ import requests
 import json
 import plotly.express as px
 import streamlit.components.v1 as components
-
+  
 # Base URL of your Flask backend
 BASE_URL = "http://127.0.0.1:5000"
 
@@ -70,6 +70,22 @@ def upload_dataset():
         if response:
             st.success(response.get("message"))
             st.write(f"Dataset shape: {response.get('shape', '')}")
+            
+def display_analysis_results(analysis_results):
+    for key, value in analysis_results.items():
+        st.subheader(key)
+        if 'statistics' in value:
+            st.write("Statistics:")
+            stats_df = pd.DataFrame(value['statistics'], index=[0])
+            st.table(stats_df)
+        if 'missing_values' in value:
+            st.write("Missing Values:")
+            missing_df = pd.DataFrame(value['missing_values'], index=[0])
+            st.table(missing_df)
+        if 'unique_values' in value:
+            st.write("Unique Values:")
+            unique_df = pd.DataFrame(value['unique_values']['examples'], columns=['Examples'])
+            st.table(unique_df)
 
 
 def analyze_dataset():
@@ -77,7 +93,7 @@ def analyze_dataset():
     response = call_api("/analyze-dataset")
 
     if response:
-        st.json(response)
+        display_analysis_results(response)
     else:
         st.error("Failed to analyze the dataset. Please ensure a dataset is uploaded.")
 
@@ -102,7 +118,6 @@ def get_visualizations():
     else:
         st.error("Failed to get visualization suggestions. Please ensure a dataset is uploaded.")
 
-
 def query_visualizations():
     st.header("Query Visualizations")
     query = st.text_input("Enter a natural language query about the dataset:")
@@ -111,20 +126,53 @@ def query_visualizations():
         if query.strip():
             response = call_api("/query-visualizations", method="POST", json_data={"query": query})
 
-            # Debugging: show the response from the backend
             if response:
-                st.json(response)  # Show the raw response for debugging
+                # Display the query interpretation
+                if "query" in response:
+                    st.subheader("Query:")
+                    st.write(response["query"])
 
-                # Just display the analysis, no chart rendering here
-                if 'analysis' in response:
-                    st.write(f"Analysis: {response['analysis']}")
-                # else:
-                #     st.warning("No analysis found for the query.")
+                # Display the primary visualization
+                if "primary_visualization" in response:
+                    primary = response["primary_visualization"]
+                    st.subheader("Primary Visualization")
+                    st.write(primary["description"])
+                    render_chart(
+                        primary["chart_type"],
+                        primary["variables"],
+                        response.get("chart_data", [])  # Ensure chart_data is included in the backend response
+                    )
+
+                # Display additional insights
+                if "additional_insights" in response and response["additional_insights"]:
+                    st.subheader("Additional Insights")
+                    st.write(response["additional_insights"])
+
+                # Display alternative visualizations
+                if "alternative_visualizations" in response and response["alternative_visualizations"]:
+                    st.subheader("Alternative Visualizations")
+                    for alt in response["alternative_visualizations"]:
+                        st.write(f"**{alt['chart_type'].capitalize()} Chart:** {alt['description']}")
+                        render_chart(
+                            alt["chart_type"],
+                            alt["variables"],
+                            response.get("chart_data", [])  # Ensure chart_data is included in the backend response
+                        )
+                        st.write("---")
+
+                # Display interpretation
+                if "interpretation" in response and response["interpretation"]:
+                    st.subheader("Interpretation")
+                    st.write(response["interpretation"])
+
+                # Display limitations
+                if "limitations" in response and response["limitations"]:
+                    st.subheader("Limitations")
+                    st.write(response["limitations"])
             else:
-                st.error("Failed to process the query.")
+                st.error("Failed to process the query. Please ensure the query matches the dataset.")
         else:
             st.error("Please enter a query before submitting.")
-
 
 def explore_data():
     st.header("Explore Dataset")
